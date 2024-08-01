@@ -16,13 +16,13 @@ use std::{
 fn main() {
     init_from_env(Env::default().filter_or(DEFAULT_FILTER_ENV, "info"));
 
-    let encode_ctx = EncodeContext {
-        name: String::from("h264_nvenc"),
+    let encode_ctx: EncodeContext = EncodeContext {
+        name: String::from("libsvtav1"),
         mc_name: None,
         width: 1920,
         height: 1080,
-        pixfmt: AV_PIX_FMT_NV12,
-        align: 0,
+        pixfmt: AV_PIX_FMT_YUV420P,
+        align: 32,
         kbs: 0,
         fps: 30,
         gop: 60,
@@ -32,8 +32,8 @@ fn main() {
         q: -1,
     };
     let decode_ctx = DecodeContext {
-        name: String::from("hevc"),
-        device_type: AV_HWDEVICE_TYPE_D3D11VA,
+        name: String::from("libdav1d"),
+        device_type: AV_HWDEVICE_TYPE_NONE,
         thread_count: 4,
     };
     let _ = std::thread::spawn(move || test_encode_decode(encode_ctx, decode_ctx)).join();
@@ -56,7 +56,7 @@ fn test_encode_decode(encode_ctx: EncodeContext, decode_ctx: DecodeContext) {
     let mut video_decoder = Decoder::new(decode_ctx).unwrap();
 
     let mut yuv_file = File::open("input/1920_1080_decoded.yuv").unwrap();
-    let mut encode_file = File::create("output/1920_1080.265").unwrap();
+    let mut encode_file = File::create("output/1920_1080.av1").unwrap();
     let mut decode_file = File::create("output/1920_1080_decode.yuv").unwrap();
 
     let mut buf = vec![0; size + 64];

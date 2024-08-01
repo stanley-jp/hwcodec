@@ -348,6 +348,7 @@ private:
         if (ret != AVERROR(EAGAIN)) {
           LOG_ERROR("avcodec_receive_packet failed, ret = " + av_err2str(ret));
         }
+        LOG_ERROR("avcodec_receive_packet failed but not EAGAIN, ret = " + av_err2str(ret));
         goto _exit;
       }
       encoded = true;
