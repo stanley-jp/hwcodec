@@ -181,7 +181,7 @@ mod ffmpeg {
         let target_os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
         let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
         println!("cargo:rustc-link-search=native=deps/ffmpeg/{arch_dir}/lib");
-        let mut static_libs = vec!["avcodec", "avutil", "avformat"];
+        let mut static_libs = vec!["avcodec", "avutil", "avformat", "SvtAv1Enc", "dav1d"];
         if target_os == "windows" {
             static_libs.push("mfx");
         }
@@ -192,7 +192,7 @@ mod ffmpeg {
         let dyn_libs: Vec<&str> = if target_os == "windows" {
             ["User32", "bcrypt", "ole32", "advapi32"].to_vec()
         } else if target_os == "linux" {
-            let mut v = ["x264", "x265", "SvtAv1Enc", "va", "va-drm", "va-x11", "vdpau", "X11", "stdc++", "dav1d"].to_vec();
+            let mut v = ["x264", "x265", "va", "va-drm", "va-x11", "vdpau", "X11", "stdc++"].to_vec();
             if target_arch == "x86_64" {
                 v.push("z");
             }
