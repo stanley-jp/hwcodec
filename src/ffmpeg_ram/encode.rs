@@ -6,7 +6,7 @@ use crate::{
     ffmpeg::{av_log_get_level, av_log_set_level, AVPixelFormat, AV_LOG_ERROR, AV_LOG_PANIC},
     ffmpeg_ram::{
         ffmpeg_linesize_offset_length, ffmpeg_ram_encode, ffmpeg_ram_free_encoder,
-        ffmpeg_ram_new_encoder, ffmpeg_ram_set_bitrate, CodecInfo, AV_NUM_DATA_POINTERS,
+        ffmpeg_ram_new_encoder, ffmpeg_ram_set_bitrate, ffmpeg_ram_get_packet ,CodecInfo, AV_NUM_DATA_POINTERS,
     },
 };
 use log::{error, trace};
@@ -128,6 +128,23 @@ impl Encoder {
             if result != 0 {
                 if av_log_get_level() >= AV_LOG_ERROR as _ {
                     error!("Error encode: {}", result);
+                }
+                return Err(result);
+            }
+            Ok(&mut *self.frames)
+        }
+    }
+
+    pub fn try_get_packet(&mut self) -> Result<&mut Vec<EncodeFrame>, i32> {
+        unsafe {
+            (&mut *self.frames).clear();
+            let result = ffmpeg_ram_get_packet(
+                self.codec,
+                self.frames as *const _ as *const c_void,
+            );
+            if result != 0 {
+                if av_log_get_level() >= AV_LOG_ERROR as _ {
+                    error!("Error try get packet: {}", result);
                 }
                 return Err(result);
             }

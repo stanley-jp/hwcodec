@@ -265,6 +265,25 @@ public:
     return true;
   }
 
+  int try_get_packet(const void *obj) {
+    int ret;
+    bool encoded = false;
+    while (ret >= 0) {
+      if ((ret = avcodec_receive_packet(c_, pkt_)) < 0) {
+        LOG_ERROR("try avcodec_receive_packet failed, ret = " + av_err2str(ret) + " " + std::to_string(ret));
+        goto _exit;
+      } else {
+        LOG_ERROR("try get error code = " + av_err2str(ret));
+      }
+      encoded = true;
+      callback_(pkt_->data, pkt_->size, pkt_->pts,
+                pkt_->flags & AV_PKT_FLAG_KEY, obj);
+    }
+    _exit:
+    av_packet_unref(pkt_);
+    return encoded ? 0 : -1;
+  }
+
   int encode(const uint8_t *data, int length, const void *obj, uint64_t ms) {
     int ret;
 
@@ -348,7 +367,6 @@ private:
         if (ret != AVERROR(EAGAIN)) {
           LOG_ERROR("avcodec_receive_packet failed, ret = " + av_err2str(ret));
         }
-        LOG_ERROR("avcodec_receive_packet failed but not EAGAIN, ret = " + av_err2str(ret));
         goto _exit;
       }
       encoded = true;
@@ -434,6 +452,15 @@ extern "C" int ffmpeg_ram_encode(FFmpegRamEncoder *encoder, const uint8_t *data,
     return encoder->encode(data, length, obj, ms);
   } catch (const std::exception &e) {
     LOG_ERROR("ffmpeg_ram_encode failed, " + std::string(e.what()));
+  }
+  return -1;
+}
+
+extern "C" int ffmpeg_ram_get_packet(FFmpegRamEncoder *encoder, const void *obj) {
+  try {
+    return encoder->try_get_packet(obj);
+  } catch (const std::exception &e) {
+    LOG_ERROR("ffmpeg_ram_get_packet failed, " + std::string(e.what()));
   }
   return -1;
 }

@@ -10,7 +10,7 @@ use hwcodec::{
 };
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::{Read, Write}, thread::sleep, time::Duration,
 };
 
 fn main() {
@@ -24,8 +24,8 @@ fn main() {
         pixfmt: AV_PIX_FMT_YUV420P,
         align: 32,
         kbs: 0,
-        fps: 30,
-        gop: 60,
+        fps: 10,
+        gop: 50,
         quality: Quality_Default,
         rc: RC_DEFAULT,
         thread_count: 4,
@@ -64,11 +64,15 @@ fn test_encode_decode(encode_ctx: EncodeContext, decode_ctx: DecodeContext) {
     let mut decode_sum = 0;
     let mut encode_size = 0;
     let mut counter = 0;
+    let mut encode_count = 0;
 
     let mut f = |data: &[u8]| {
         let now = std::time::Instant::now();
+        sleep(Duration::from_millis(40));
+        encode_count += 1;
+        log::info!("send one frame to encode, encode count: {}", encode_count);
         if let Ok(encode_frames) = video_encoder.encode(data, 0) {
-            log::info!("encode:{:?}", now.elapsed());
+            log::info!("encode:{:?}, frames_num: {}", now.elapsed(), encode_frames.len());
             encode_sum += now.elapsed().as_micros();
             for encode_frame in encode_frames.iter() {
                 encode_size += encode_frame.data.len();
@@ -77,14 +81,41 @@ fn test_encode_decode(encode_ctx: EncodeContext, decode_ctx: DecodeContext) {
 
                 let now = std::time::Instant::now();
                 if let Ok(docode_frames) = video_decoder.decode(&encode_frame.data) {
-                    log::info!("decode:{:?}", now.elapsed());
+                    // log::info!("decode:{:?}", now.elapsed());
                     decode_sum += now.elapsed().as_micros();
                     counter += 1;
                     for decode_frame in docode_frames {
-                        log::info!("decode_frame:{}", decode_frame);
+                        log::info!("decode_frame:{}, decode_count: {}", decode_frame, counter);
                         for data in decode_frame.data.iter() {
                             decode_file.write_all(data).unwrap();
                             decode_file.flush().unwrap();
+                        }
+                    }
+                }
+            }
+        } else {
+            log::info!("failed to get encode, retry..");
+            sleep(Duration::from_millis(30));
+            if let Ok(encode_frames) = video_encoder.try_get_packet() {
+                log::info!("cjp try get success");
+                log::info!("encode:{:?}, frames_num: {}", now.elapsed(), encode_frames.len());
+                encode_sum += now.elapsed().as_micros();
+                for encode_frame in encode_frames.iter() {
+                    encode_size += encode_frame.data.len();
+                    encode_file.write_all(&encode_frame.data).unwrap();
+                    encode_file.flush().unwrap();
+
+                    let now = std::time::Instant::now();
+                    if let Ok(docode_frames) = video_decoder.decode(&encode_frame.data) {
+                        // log::info!("decode:{:?}", now.elapsed());
+                        decode_sum += now.elapsed().as_micros();
+                        counter += 1;
+                        for decode_frame in docode_frames {
+                            log::info!("decode_frame:{}, decode_count: {}", decode_frame, counter);
+                            for data in decode_frame.data.iter() {
+                                decode_file.write_all(data).unwrap();
+                                decode_file.flush().unwrap();
+                            }
                         }
                     }
                 }

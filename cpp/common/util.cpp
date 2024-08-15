@@ -34,10 +34,12 @@ void set_av_codec_ctx(AVCodecContext *c, const std::string &name, int kbs,
   /* put sample parameters */
   // https://github.com/FFmpeg/FFmpeg/blob/415f012359364a77e8394436f222b74a8641a3ee/libavcodec/encode.c#L581
   if (kbs > 0) {
-    c->bit_rate = kbs * 1000;
+    // c->bit_rate = kbs * 1000;
     if (name.find("qsv") != std::string::npos) {
       c->rc_max_rate = c->bit_rate;
       c->bit_rate--; // cbr with vbr
+    } else if (name.find("av1") != std::string::npos) {
+      c->rc_max_rate = kbs;
     }
   }
   /* frames per second */
@@ -207,11 +209,32 @@ bool set_rate_control(AVCodecContext *c, const std::string &name, int rc,
   std::vector<CodecOptions> codecs = {
       {"nvenc", "rc", {{RC_CBR, "cbr"}, {RC_VBR, "vbr"}}},
       {"amf", "rc", {{RC_CBR, "cbr"}, {RC_VBR, "vbr_latency"}}},
+      {"libsvtav1", "rc", {{RC_CBR, "cbr"}, {RC_VBR, "vbr"}}},
       {"mediacodec",
        "bitrate_mode",
        {{RC_CBR, "cbr"}, {RC_VBR, "vbr"}, {RC_CQ, "cq"}}},
       // {"videotoolbox", "constant_bit_rate", {{RC_CBR, "1"}}},
     };
+
+  if (name.find("libsvtav1") != std::string::npos) {
+    int ret = av_opt_set(c->priv_data, "preset", "10", 0);
+    if (ret < 0) {
+        LOG_ERROR("set preset, ret = " + av_err2str(ret));
+    }
+    ret = av_opt_set(c->priv_data, "crf", "35", 0);
+    if (ret < 0) {
+        LOG_ERROR("set crf, ret = " + av_err2str(ret));
+    }
+    // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=2:fast-decode=1:buf-initial-sz=2000:buf-optimal-sz=2000:keyint=-1:irefresh-type=2:lookahead=0:enable-tf=0:hierarchical-levels=1:scm=1", 0);
+    std::string params = "pred-struct=1:rc=0:irefresh-type=2:enable-tf=1:scm=2:mbr-overshoot-pct=0";
+    params.append(":mbr=").append(std::to_string(c->rc_max_rate));
+    params.append(":keyint=").append(std::to_string(c->gop_size));
+    ret = av_opt_set(c->priv_data, "svtav1-params", params.c_str(), 0);
+    // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=0:keyint=-1:irefresh-type=2:enable-tf=0:scm=0", 0);
+    if (ret < 0) {
+            LOG_ERROR("ret = " + av_err2str(ret));
+    }    
+  }
 
   for (const auto &codec : codecs) {
     if (name.find(codec.codec_name) != std::string::npos) {
