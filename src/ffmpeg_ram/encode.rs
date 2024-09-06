@@ -126,9 +126,9 @@ impl Encoder {
                 ms,
             );
             if result != 0 {
-                if av_log_get_level() >= AV_LOG_ERROR as _ {
-                    error!("Error encode: {}", result);
-                }
+                // if av_log_get_level() >= AV_LOG_ERROR as _ {
+                //     error!("Error encode: {}", result);
+                // }
                 return Err(result);
             }
             Ok(&mut *self.frames)

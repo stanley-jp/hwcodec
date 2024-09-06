@@ -35,12 +35,14 @@ void set_av_codec_ctx(AVCodecContext *c, const std::string &name, int kbs,
   // https://github.com/FFmpeg/FFmpeg/blob/415f012359364a77e8394436f222b74a8641a3ee/libavcodec/encode.c#L581
   if (kbs > 0) {
     // c->bit_rate = kbs * 1000;
+
     if (name.find("qsv") != std::string::npos) {
       c->rc_max_rate = c->bit_rate;
       c->bit_rate--; // cbr with vbr
-    } else if (name.find("av1") != std::string::npos) {
-      c->rc_max_rate = kbs;
-    }
+    } 
+    // else if (name.find("av1") != std::string::npos) {
+    //   c->rc_max_rate = kbs;
+    // }
   }
   /* frames per second */
   c->time_base = av_make_q(1, 1000);
@@ -221,13 +223,13 @@ bool set_rate_control(AVCodecContext *c, const std::string &name, int rc,
     if (ret < 0) {
         LOG_ERROR("set preset, ret = " + av_err2str(ret));
     }
-    ret = av_opt_set(c->priv_data, "crf", "35", 0);
+    ret = av_opt_set(c->priv_data, "crf", "45", 0);
     if (ret < 0) {
         LOG_ERROR("set crf, ret = " + av_err2str(ret));
     }
     // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=2:fast-decode=1:buf-initial-sz=2000:buf-optimal-sz=2000:keyint=-1:irefresh-type=2:lookahead=0:enable-tf=0:hierarchical-levels=1:scm=1", 0);
-    std::string params = "pred-struct=1:rc=0:irefresh-type=2:enable-tf=1:scm=2:mbr-overshoot-pct=0";
-    params.append(":mbr=").append(std::to_string(c->rc_max_rate));
+    std::string params = "pred-struct=1:rc=0:irefresh-type=2:enable-tf=1:scm=2:buf-initial-sz=2000:buf-optimal-sz=2000:mbr-overshoot-pct=25:enable-qm=1";
+    // params.append(":mbr=").append(std::to_string(c->rc_max_rate)).append("k");
     params.append(":keyint=").append(std::to_string(c->gop_size));
     ret = av_opt_set(c->priv_data, "svtav1-params", params.c_str(), 0);
     // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=0:keyint=-1:irefresh-type=2:enable-tf=0:scm=0", 0);
