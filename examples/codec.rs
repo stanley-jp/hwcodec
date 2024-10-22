@@ -68,7 +68,7 @@ fn test_encode_decode(encode_ctx: EncodeContext, decode_ctx: DecodeContext) {
 
     let mut f = |data: &[u8]| {
         let now = std::time::Instant::now();
-        sleep(Duration::from_millis(40));
+        // sleep(Duration::from_millis(40));
         encode_count += 1;
         log::info!("send one frame to encode, encode count: {}", encode_count);
         if let Ok(encode_frames) = video_encoder.encode(data, 0) {

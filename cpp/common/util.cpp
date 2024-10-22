@@ -40,9 +40,9 @@ void set_av_codec_ctx(AVCodecContext *c, const std::string &name, int kbs,
       c->rc_max_rate = c->bit_rate;
       c->bit_rate--; // cbr with vbr
     } 
-    // else if (name.find("av1") != std::string::npos) {
-    //   c->rc_max_rate = kbs;
-    // }
+    else if (name.find("av1") != std::string::npos) {
+      // c->rc_max_rate = kbs;
+    }
   }
   /* frames per second */
   c->time_base = av_make_q(1, 1000);
@@ -228,14 +228,21 @@ bool set_rate_control(AVCodecContext *c, const std::string &name, int rc,
         LOG_ERROR("set crf, ret = " + av_err2str(ret));
     }
     // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=2:fast-decode=1:buf-initial-sz=2000:buf-optimal-sz=2000:keyint=-1:irefresh-type=2:lookahead=0:enable-tf=0:hierarchical-levels=1:scm=1", 0);
-    std::string params = "pred-struct=1:rc=0:irefresh-type=2:enable-tf=1:scm=2:buf-initial-sz=2000:buf-optimal-sz=2000:mbr-overshoot-pct=25:enable-qm=1";
+    // std::string params = "pred-struct=1:rc=0:irefresh-type=2:enable-tf=1:scm=2:buf-initial-sz=2000:buf-optimal-sz=2000:mbr-overshoot-pct=25:enable-qm=1"; // online
+    // std::string params = "pred-struct=1:rc=2:irefresh-type=2:enable-tf=1:scm=2:enable-qm=1:max-qp=54:min-qp=30";
+    std::string params = "pred-struct=1:irefresh-type=2:enable-tf=1:scm=2:enable-qm=1";
+    if (c->width > 2560) {
+      params.append(":max-qp=54:min-qp=30:rc=2").append(":tbr=").append("2000k");
+    } else {
+      params.append(":rc=0");
+    }
     // params.append(":mbr=").append(std::to_string(c->rc_max_rate)).append("k");
     params.append(":keyint=").append(std::to_string(c->gop_size));
     ret = av_opt_set(c->priv_data, "svtav1-params", params.c_str(), 0);
     // ret = av_opt_set(c->priv_data, "svtav1-params", "pred-struct=1:rc=0:keyint=-1:irefresh-type=2:enable-tf=0:scm=0", 0);
     if (ret < 0) {
             LOG_ERROR("ret = " + av_err2str(ret));
-    }    
+    }
   }
 
   for (const auto &codec : codecs) {
