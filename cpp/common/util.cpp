@@ -219,7 +219,7 @@ bool set_rate_control(AVCodecContext *c, const std::string &name, int rc,
     };
 
   if (name.find("libsvtav1") != std::string::npos) {
-    int ret = av_opt_set(c->priv_data, "preset", "11", 0);
+    int ret = av_opt_set(c->priv_data, "preset", "12", 0);
     if (ret < 0) {
         LOG_ERROR("set preset, ret = " + av_err2str(ret));
     }
